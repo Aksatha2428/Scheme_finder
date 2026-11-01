@@ -48,9 +48,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Strict CORS
+// Dynamic CORS to support production deployments (Render, Vercel) and local dev
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://localhost:4173',
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:4173'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error('Blocked by CORS policy: Origin not allowed'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
